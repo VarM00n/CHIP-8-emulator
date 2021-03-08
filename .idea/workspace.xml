@@ -88,7 +88,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1615238676472</updated>
-      <workItem from="1615238703317" duration="2697000" />
+      <workItem from="1615238703317" duration="5689000" />
     </task>
     <servers />
   </component>
@@ -138,7 +138,7 @@
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/CHIP-8.py</url>
-          <line>53</line>
+          <line>54</line>
           <option name="timeStamp" value="1" />
         </line-breakpoint>
       </breakpoints>

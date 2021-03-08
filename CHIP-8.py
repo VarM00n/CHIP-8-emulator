@@ -11,7 +11,7 @@ class CHIP8:
     delayTimer = 0
     soundTimer = 0
     # Stack
-    stack = 0
+    stack = []
     sp = 0
     # Screen
     monitor = []
@@ -49,18 +49,68 @@ class CHIP8:
             self.keyboard.append(0)
         for i in range(0, 64*32):
             self.monitor.append(0)
+        self.pc = 0x200
 
     def interpreter(self, opcode):
         operation = (opcode & 0xF000) >> 12
         if operation == 0x0:
-            suboperation = (opcode & 0x00FF) >> 8
-            if suboperation == 0xE0: # clear the screen
+            sub_operation = (opcode & 0x00FF) >> 8
+            if sub_operation == 0xE0:  # clear the screen
                 for i in range(0, 64*32):
                     self.monitor[i] = 0
-            if suboperation == 0xEE: # return from subroutine
-                pass
+            if sub_operation == 0xEE:  # return from subroutine
+                self.pc = self.stack.pop()
+        if operation == 0x1:  # jump to the address at NNN
+            self.pc = opcode & 0x0FFF
+        if operation == 0x2:  # calls a subroutine at NNN
+            self.stack.append(self.pc)
+            self.pc = opcode & 0x0FFF
+        if operation == 0x3:  # jumps to another opcode if v_i[x_n] == nn
+            x_n = (opcode & 0x0F00) >> 8
+            nn = (opcode & 0x00FF) >> 4
+            if self.v_i[x_n] == nn:
+                self.pc += 2
+        if operation == 0x4:  # jumps to another opcode if v_i[x_n] != nn
+            x_n = (opcode & 0x0F00) >> 8
+            nn = (opcode & 0x00FF) >> 4
+            if self.v_i[x_n] != nn:
+                self.pc += 2
+        if operation == 0x5:  # jumps to the next opcode if v_i[x_x] == v_i[x_y]
+            x_x = (opcode & 0x0F00) >> 8
+            x_y = (opcode & 0x00F0) >> 4
+            if self.v_i[x_x] == self.v_i[x_y]:
+                self.pc += 2
+        if operation == 0x6:  # sets v_i[x_x] to nn
+            x_x = (opcode & 0x0F00) >> 8
+            nn = (opcode & 0x00FF)
+            self.v_i[x_x] = nn
+        if operation == 0x7:  # adds nn to v_i[x_x]
+            x_x = (opcode & 0x0F00) >> 8
+            nn = (opcode & 0x00FF)
+            self.v_i[x_x] += nn
+        if operation == 0x8:  # logic
+            sub_operation = (opcode & 0x000F)
+            if sub_operation == 0:
+                x_x = (opcode & 0x0F00) >> 8
+                x_y = (opcode & 0x00F0) >> 4
+                self.v_i[x_x] = self.v_i[x_y]
+            if sub_operation == 1:
+                x_x = (opcode & 0x0F00) >> 8
+                x_y = (opcode & 0x00F0) >> 4
+                self.v_i[x_x] = self.v_i[x_x] | self.v_i[x_y]
+            if sub_operation == 2:
+                x_x = (opcode & 0x0F00) >> 8
+                x_y = (opcode & 0x00F0) >> 4
+                self.v_i[x_x] = self.v_i[x_x] & self.v_i[x_y]
+            if sub_operation == 3:
+                x_x = (opcode & 0x0F00) >> 8
+                x_y = (opcode & 0x00F0) >> 4
+                self.v_i[x_x] = self.v_i[x_x] ^ self.v_i[x_y]
+            if sub_operation == 4:
+                x_x = (opcode & 0x0F00) >> 8
+                x_y = (opcode & 0x00F0) >> 4
+                self.v_i[x_x] = self.v_i[x_x] + self.v_i[x_y]
             
-
 
 
 

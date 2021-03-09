@@ -1,3 +1,4 @@
+import random
 
 
 class CHIP8:
@@ -47,17 +48,29 @@ class CHIP8:
         for i in range(0, 16):
             self.v_i.append(0)
             self.keyboard.append(0)
-        for i in range(0, 64*32):
-            self.monitor.append(0)
+        for i in range(0, 32):
+            self.monitor.append([])
+            for j in range(0, 64):
+                self.monitor[i].append(0)
         self.pc = 0x200
+        f = open("Chip8_Picture.ch8", "rb")
+        content = f.read()
+        for i in range(0, len(content)):
+            self.memory[i + self.pc] = content[i]
+
+    def play(self):
+        while self.memory[self.pc] + self.memory[self.pc + 1] != 0:
+            opcode = (self.memory[self.pc] << 8) + self.memory[self.pc + 1]
+            self.interpreter(opcode)
 
     def interpreter(self, opcode):
         operation = (opcode & 0xF000) >> 12
         if operation == 0x0:
-            sub_operation = (opcode & 0x00FF) >> 8
+            sub_operation = (opcode & 0x00FF)
             if sub_operation == 0xE0:  # clear the screen
-                for i in range(0, 64*32):
-                    self.monitor[i] = 0
+                for i in range(0, 31):
+                    for j in range(0, 63):
+                        self.monitor[i][j] = 0
             if sub_operation == 0xEE:  # return from subroutine
                 self.pc = self.stack.pop()
         if operation == 0x1:  # jump to the address at NNN
@@ -90,29 +103,87 @@ class CHIP8:
             self.v_i[x_x] += nn
         if operation == 0x8:  # logic
             sub_operation = (opcode & 0x000F)
-            if sub_operation == 0:
+            if sub_operation == 0x0:
                 x_x = (opcode & 0x0F00) >> 8
                 x_y = (opcode & 0x00F0) >> 4
                 self.v_i[x_x] = self.v_i[x_y]
-            if sub_operation == 1:
+            if sub_operation == 0x1:
                 x_x = (opcode & 0x0F00) >> 8
                 x_y = (opcode & 0x00F0) >> 4
                 self.v_i[x_x] = self.v_i[x_x] | self.v_i[x_y]
-            if sub_operation == 2:
+            if sub_operation == 0x2:
                 x_x = (opcode & 0x0F00) >> 8
                 x_y = (opcode & 0x00F0) >> 4
                 self.v_i[x_x] = self.v_i[x_x] & self.v_i[x_y]
-            if sub_operation == 3:
+            if sub_operation == 0x3:
                 x_x = (opcode & 0x0F00) >> 8
                 x_y = (opcode & 0x00F0) >> 4
                 self.v_i[x_x] = self.v_i[x_x] ^ self.v_i[x_y]
-            if sub_operation == 4:
+            if sub_operation == 0x4:
                 x_x = (opcode & 0x0F00) >> 8
                 x_y = (opcode & 0x00F0) >> 4
                 self.v_i[x_x] = self.v_i[x_x] + self.v_i[x_y]
-            
-
+            if sub_operation == 0x5:
+                x_x = (opcode & 0x0F00) >> 8
+                x_y = (opcode & 0x00F0) >> 4
+                self.v_i[x_x] = self.v_i[x_x] - self.v_i[x_y]
+            if sub_operation == 0x6:
+                x_x = (opcode & 0x0F00) >> 8
+                x_y = (opcode & 0x00F0) >> 4
+                self.v_i[x_x] = self.v_i[x_y]
+                self.v_i[15] = self.v_i[x_x] & 0b00000001
+                self.v_i[x_x] = self.v_i[x_x] >> 1
+            if sub_operation == 0x7:
+                x_x = (opcode & 0x0F00) >> 8
+                x_y = (opcode & 0x00F0) >> 4
+                self.v_i[x_x] = self.v_i[x_y] - self.v_i[x_x]
+            if sub_operation == 0xE:
+                x_x = (opcode & 0x0F00) >> 8
+                x_y = (opcode & 0x00F0) >> 4
+                self.v_i[x_x] = self.v_i[x_y]
+                self.v_i[15] = self.v_i[x_x] & 0b00000001
+                self.v_i[x_x] = self.v_i[x_x] << 1
+        if operation == 0x9:
+            x_x = (opcode & 0x0F00) >> 8
+            x_y = (opcode & 0x00F0) >> 4
+            if self.v_i[x_x] != self.v_i[x_y]:
+                self.pc += 2
+        if operation == 0xA:
+            nnn = opcode & 0x0FFF
+            self.I_address_register = nnn
+        if operation == 0xB:
+            nnn = opcode & 0x0FFF
+            self.pc = self.v_i[0] + nnn
+        if operation == 0xC:
+            x_x = (opcode & 0x0F00) >> 8
+            nn = (opcode & 0x00FF)
+            self.v_i[x_x] = random.randint(0, 255) & nn
+        if operation == 0xD:
+            x_x = (opcode & 0x0F00) >> 8
+            x_y = (opcode & 0x00F0) >> 4
+            n = opcode & 0x000F
+            self.v_i[0xF] = 0
+            for i in range(0, int(n)):
+                row = self.memory[self.I_address_register + i]
+                arr = []
+                while row != 0:
+                    arr.append(int(row % 2))
+                    row = int(row / 2)
+                while len(arr) != 8:
+                    arr.append(0)
+                arr = arr[::-1]
+                for j in range(0, 7):
+                    if self.monitor[(self.v_i[x_x] + i) % 32][(self.v_i[x_y] + j) % 64] == 1 and arr[j] == 0:
+                        self.v_i[0xF] = 1
+                    self.monitor[(self.v_i[x_x] + i) % 32][(self.v_i[x_y] + j) % 64] = arr[j]
+        if operation == 0xE:
+            pass
+        if operation == 0xF:
+            pass
+        self.pc += 2
 
 
 chip = CHIP8()
-chip.interpreter(0xA0E0)
+chip.play()
+print("Yeeey")
+
